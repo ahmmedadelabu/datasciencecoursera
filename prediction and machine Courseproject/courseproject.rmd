@@ -1,0 +1,132 @@
+
+
+ ## Background
+  
+  ### Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+  
+ ## Data
+  
+  ### The training data for this project are available here:
+  
+  ###https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+  
+  ###The test data are available here:
+  
+ ### https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+  
+###The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+##LOADING REQUIRED R-PACAKGES
+library(caret)
+library(randomForest)
+library(gbm)
+library(rpart)
+
+###set working dir
+###setwd('C:\\Users\\Ahmmed\\Desktop\\from flash drive 25082017\\cousera\\course material\\praticalmachine\\wk4\\')
+
+### load train and test pml data into variables
+train_in <- read.csv('pml-training.csv', header=T)
+validation <- read.csv('pml-testing.csv', header=T)
+
+##Partition of training dataset ino training and testing probability 0.6:0.4 and set a fixed seed for reproducible of result
+
+set.seed(12345)
+training_sample <- createDataPartition(y=train_in$classe, p=0.6, list=FALSE)
+training <- train_in[training_sample, ]
+testing <- train_in[-training_sample, ]
+
+##identification of non-zero column variables
+zero.colnames <- sapply(names(validation), function(x) all(is.na(validation[,x])==TRUE))
+non.zero.names <- names(zero.colnames)[zero.colnames==FALSE]
+non.zero.names <- non.zero.names[-(1:7)]
+non.zero.names <- non.zero.names[1:(length(non.zero.names)-1)]
+
+###below codes display variables use in this exercise
+non.zero.names
+
+##cross validation
+###Cross validation is done for each model with K = 3.
+###It is a robust method for estimating accuracy, and the size of k and tune the amount of bias in the estimate, with popular values set to 3, 5, 7 and 10.
+###because of time of execution data sample i used K-fold of 3.
+
+fit.Control <- trainControl(method='cv', number = 3)
+
+##building of the model for prediction.
+###There are several approaches of building model in predictive machine learning based on the outcome and nature of the predicting variable (depenedent variable)
+### that will tell if is supervised or unsupervised predictive machine learning. This exercise is a classification predictive machine learning the most commonly used
+### methods are considered in this exercise. These are: 
+
+*1. Decision trees with CART (rpart) 
+*2. Stochastic gradient boosting trees (gbm) 
+*3. Random forest decision trees (rf) 
+
+##Reason.
+###Because the dependent variables are classe (factors) i.e nominal data. 
+###Meaning that is classification problem.
+
+model_cart <- train(classe ~ ., 
+  data=training[, c('classe', non.zero.names)],
+  trControl=fit.Control,
+  method='rpart'
+)
+save(model_cart, file='FitCART.RData')
+model_gbm <- train(classe ~ ., 
+  data=training[, c('classe', non.zero.names)],
+  trControl=fit.Control,
+  method='gbm'
+)
+save(model_gbm, file='FitGBM.RData')
+model_rf <- train(classe ~ .,
+  data=training[, c('classe', non.zero.names)],
+  trControl=fit.Control,
+  method='rf',
+  ntree=100
+)
+save(model_rf, file='FitRF.RData')
+
+##model accuracy (out-of-sample error measure)
+### This section deal with model accuracy assesment to be able to determine which of the method is the best for the available datatset.
+### From the cross validation approach implies the the higher the value the bestter the model.
+
+predCART <- predict(model_cart, newdata=testing)
+cmCART <- confusionMatrix(predCART, testing$classe)
+predGBM <- predict(model_gbm, newdata=testing)
+cmGBM <- confusionMatrix(predGBM, testing$classe)
+predRF <- predict(model_rf, newdata=testing)
+cmRF <- confusionMatrix(predRF, testing$classe)
+AccuracyResults <- data.frame(
+  Model = c('CART', 'GBM', 'RF'),
+  Accuracy = rbind(cmCART$overall[1], cmGBM$overall[1], cmRF$overall[1])
+)
+##The result from the 3-model fits and accuracy result, shows that 
+##GBM (gradient boosting method) and RF (random forest) both perform better
+##for the avaliable dataset than the CART model. And the champion model is the 
+##RF model fit for this exercise
+
+print(AccuracyResults)
+
+##Model Prediction
+###As a last step in the project, I made prediction using the validation data 
+###sample (‘pml-testing.csv’) to predict a classe for each of the 20 observations 
+###based on the other variables in the datasets.
+
+champion_model <- model_rf
+predValidation <- predict(champion_model, newdata=validation)
+ValidationPredictionResults <- data.frame(
+  problem_id=validation$problem_id,
+  predicted=predValidation
+)
+print(ValidationPredictionResults)
+
+##Conclusion
+###Based on the data available, I was able to fit a reasonably model with a high 
+###degree of accuracy in predicting out of sample observations. 
+###One assumption that I make in this exercise is that I limit the variables use to non-zero
+###in data preparation section in the validation sample. For example, when fitting a model on all training data columns,
+###some features that are all missing in the validation sample do included non-zero items in 
+###the training sample and are used in the decision tree models.
+###At the presence of the missing data in the samples, the random forest fit model with cross-validation
+
+
+
