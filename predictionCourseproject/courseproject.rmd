@@ -38,7 +38,8 @@
 ## What you think the expected out of sample error is, and 
 * The out of sample result show a robust and accuracy result of the three choice model and random forest and gradient boosting model outperformed CART. And random forest is the best for this dataset for this exercise.
 
-## Why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+## Why you made the choices you did.
+* Because of the nature of the data and most expecially the dependent variab;e "Classe" as a categorical variable which indicate that the model fit will be of classification predictive model.
 * The result from the 3-model fits and accuracy result, shows that GBM (gradient boosting method) and RF (random forest) both perform better for the avaliable dataset than the CART model. And the champion model is the RF model fit for this exercise
 
 
